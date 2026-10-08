@@ -13,7 +13,7 @@ router.register(r'courses', CourseViewSet, basename='courses')
 urlpatterns = [
     path('create/', MaterialCreateAPIView.as_view(), name='create'),
     path('', MaterialCreateAPIView.as_view(), name='list'),
-    path('<pk:int>/', MaterialRetrieveAPIView.as_view(), name='retrieve'),
-    path('update/<pk:int>/', MaterialUpdateAPIView.as_view(), name='update'),
-    path('delete/<pk:int>/', MaterialDestroyAPIView.as_view(), name='delete'),
+    path('<int:pk>/', MaterialRetrieveAPIView.as_view(), name='retrieve'),
+    path('update/<int:pk>/', MaterialUpdateAPIView.as_view(), name='update'),
+    path('delete/<int:pk>/', MaterialDestroyAPIView.as_view(), name='delete'),
 ] + router.urls
