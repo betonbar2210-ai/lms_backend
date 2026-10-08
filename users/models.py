@@ -1,8 +1,8 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.base_user import AbstractBaseUser
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
 
-class User(AbstractUser):
+class User(AbstractBaseUser):
     email = models.EmailField(unique=True)
     phone = PhoneNumberField(blank=True, null=True)
     city = models.CharField(max_length=50, blank=True, null=True)
