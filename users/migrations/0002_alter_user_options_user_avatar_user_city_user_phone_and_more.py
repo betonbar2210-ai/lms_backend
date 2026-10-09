@@ -7,32 +7,38 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0001_initial'),
+        ("users", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='user',
-            options={'ordering': ['-id'], 'verbose_name': 'User', 'verbose_name_plural': 'Users'},
+            name="user",
+            options={
+                "ordering": ["-id"],
+                "verbose_name": "User",
+                "verbose_name_plural": "Users",
+            },
         ),
         migrations.AddField(
-            model_name='user',
-            name='avatar',
-            field=models.ImageField(blank=True, null=True, upload_to='avatars/'),
+            model_name="user",
+            name="avatar",
+            field=models.ImageField(blank=True, null=True, upload_to="avatars/"),
         ),
         migrations.AddField(
-            model_name='user',
-            name='city',
+            model_name="user",
+            name="city",
             field=models.CharField(blank=True, max_length=50, null=True),
         ),
         migrations.AddField(
-            model_name='user',
-            name='phone',
-            field=phonenumber_field.modelfields.PhoneNumberField(blank=True, max_length=128, null=True, region=None),
+            model_name="user",
+            name="phone",
+            field=phonenumber_field.modelfields.PhoneNumberField(
+                blank=True, max_length=128, null=True, region=None
+            ),
         ),
         migrations.AlterField(
-            model_name='user',
-            name='email',
+            model_name="user",
+            name="email",
             field=models.EmailField(max_length=254, unique=True),
         ),
     ]

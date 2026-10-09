@@ -32,8 +32,3 @@ class MaterialUpdateAPIView(generics.UpdateAPIView):
 
 class MaterialDestroyAPIView(generics.DestroyAPIView):
     queryset = Material.objects.all()
-
-
-
-
-

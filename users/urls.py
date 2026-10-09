@@ -8,9 +8,7 @@ app_name = UsersConfig.name
 
 
 router = routers.DefaultRouter()
-router.register(r'users', UsersViewSet, basename='users')
+router.register(r"users", UsersViewSet, basename="users")
 
 
-urlpatterns = [
-
-              ] + router.urls
+urlpatterns = [] + router.urls

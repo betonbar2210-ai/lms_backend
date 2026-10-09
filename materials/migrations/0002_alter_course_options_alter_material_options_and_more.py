@@ -7,56 +7,61 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('materials', '0001_initial'),
+        ("materials", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='course',
-            options={'verbose_name': 'Course', 'verbose_name_plural': 'Courses'},
+            name="course",
+            options={"verbose_name": "Course", "verbose_name_plural": "Courses"},
         ),
         migrations.AlterModelOptions(
-            name='material',
-            options={'verbose_name': 'Material', 'verbose_name_plural': 'Materials'},
+            name="material",
+            options={"verbose_name": "Material", "verbose_name_plural": "Materials"},
         ),
         migrations.AddField(
-            model_name='course',
-            name='description',
+            model_name="course",
+            name="description",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='course',
-            name='name',
-            field=models.CharField(default='Без названия', max_length=100),
+            model_name="course",
+            name="name",
+            field=models.CharField(default="Без названия", max_length=100),
         ),
         migrations.AddField(
-            model_name='course',
-            name='preview',
-            field=models.ImageField(blank=True, null=True, upload_to='courses/'),
+            model_name="course",
+            name="preview",
+            field=models.ImageField(blank=True, null=True, upload_to="courses/"),
         ),
         migrations.AddField(
-            model_name='material',
-            name='course',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='materials.course'),
+            model_name="material",
+            name="course",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="materials.course",
+            ),
         ),
         migrations.AddField(
-            model_name='material',
-            name='description',
+            model_name="material",
+            name="description",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='material',
-            name='name',
-            field=models.CharField(default='Без названия', max_length=100),
+            model_name="material",
+            name="name",
+            field=models.CharField(default="Без названия", max_length=100),
         ),
         migrations.AddField(
-            model_name='material',
-            name='preview',
-            field=models.ImageField(blank=True, null=True, upload_to='materials/'),
+            model_name="material",
+            name="preview",
+            field=models.ImageField(blank=True, null=True, upload_to="materials/"),
         ),
         migrations.AddField(
-            model_name='material',
-            name='video',
-            field=models.FileField(blank=True, null=True, upload_to='videos/'),
+            model_name="material",
+            name="video",
+            field=models.FileField(blank=True, null=True, upload_to="videos/"),
         ),
     ]
