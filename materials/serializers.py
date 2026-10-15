@@ -10,9 +10,14 @@ class MaterialSerializer(serializers.ModelSerializer):
 
 
 class CourseSerializer(serializers.ModelSerializer):
+    count_material = serializers.SerializerMethodField()
+
     class Meta:
         model = Course
         fields = "__all__"
+
+    def get_count_material(self, obj):
+        return obj.material.count()
 
 
 class CourseDetailSerializer(serializers.ModelSerializer):
