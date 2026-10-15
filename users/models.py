@@ -44,9 +44,46 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = []
 
     class Meta:
-        verbose_name = "User"
-        verbose_name_plural = "Users"
+        verbose_name = "Пользователь"
+        verbose_name_plural = "Пользователи"
         ordering = ["-id"]
 
     def __str__(self):
         return self.email
+
+
+class Payments(models.Model):
+    PAYMENT_METHODS = [
+        ("cash", "Наличными"),
+        ("transfer", "Перевод на счет"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="payments")
+    date = models.DateTimeField(auto_now_add=True)
+    total = models.DecimalField(max_digits=10, decimal_places=2)
+    lesson = models.ForeignKey("materials.Material", on_delete=models.CASCADE, blank=True, null=True, related_name="payment_material")
+    course = models.ForeignKey("materials.Course", on_delete=models.CASCADE, blank=True, null=True, related_name="payment_course")
+    method = models.CharField(max_length=50, choices=PAYMENT_METHODS)
+
+    class Meta:
+        verbose_name = "Платеж"
+        verbose_name_plural = "Платежи"
+        ordering = ["-date"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(course__isnull=False, lesson__isnull=True)
+                    | models.Q(course__isnull=True, lesson__isnull=False)
+                ),
+                name="payment_course_xor_lesson",
+            )
+        ]
+
+    def __str__(self):
+        if self.course:
+            paid_for = self.course.name
+        elif self.lesson:
+            paid_for = self.lesson.name
+        else:
+            paid_for = "Не указано"
+        return f"{self.user.email} - {paid_for} ({self.total} руб.)"
