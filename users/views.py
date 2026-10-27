@@ -1,18 +1,51 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets
+from rest_framework import generics, viewsets
 from rest_framework.filters import OrderingFilter
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from users.models import Payments, User
-from users.serializers import PaymentSerializer, UsersSerializer
+from users.permissions import IsSelfOrReadOnly, is_moderator
+from users.serializers import (
+    MyTokenObtainPairSerializer,
+    PaymentSerializer,
+    UserPrivateSerializer,
+    UserRegisterSerializer,
+    UsersSerializer,
+)
 
 
 class UsersViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.prefetch_related("payments").all()
+    queryset = User.objects.all()
     serializer_class = UsersSerializer
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return UserRegisterSerializer
+        if self.action == "retrieve" and self.get_object() == self.request.user:
+            return UserPrivateSerializer
+        return UsersSerializer
+
+    def get_permissions(self):
+        # Создавать пользователей может любой авторизованный,
+        # просматривать — любой, изменять — только свой профиль.
+        if self.action == "create":
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsSelfOrReadOnly()]
+
+    def get_queryset(self):
+        queryset = User.objects.all()
+        if self.action == "retrieve":
+            queryset = queryset.prefetch_related("payments")
+        return queryset
+
+
+class UserRegisterAPIView(generics.CreateAPIView):
+    serializer_class = UserRegisterSerializer
+    permission_classes = [AllowAny]
 
 
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Payments.objects.all()
     serializer_class = PaymentSerializer
 
     filter_backends = [DjangoFilterBackend, OrderingFilter]
@@ -21,3 +54,14 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
 
     ordering_fields = ("date",)
     ordering = ["-date"]
+
+    def get_queryset(self):
+        queryset = Payments.objects.select_related("user", "course", "lesson")
+        if is_moderator(self.request.user) or self.request.user.is_staff:
+            return queryset
+        return queryset.filter(user=self.request.user)
+
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
+    permission_classes = [AllowAny]

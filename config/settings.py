@@ -11,9 +11,10 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
-from dotenv import load_dotenv
-
+from datetime import timedelta
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     "users",
     "materials",
     "django_filters",
+    "rest_framework_simplejwt",
 ]
 
 MIDDLEWARE = [
@@ -148,4 +150,17 @@ REST_FRAMEWORK = {
         "rest_framework.filters.OrderingFilter",
         "rest_framework.filters.SearchFilter",
     ],
+    # Настройки JWT-токенов
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
+# Настройки срока действия токенов
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }

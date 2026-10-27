@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -6,6 +7,14 @@ class Course(models.Model):
     name = models.CharField(max_length=100, default="Без названия")
     description = models.TextField(blank=True, null=True)
     preview = models.ImageField(upload_to="courses/", blank=True, null=True)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="courses",
+        verbose_name="Владелец",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         verbose_name = "Course"
@@ -19,8 +28,18 @@ class Material(models.Model):
     name = models.CharField(max_length=100, default="Без названия")
     description = models.TextField(blank=True, null=True)
     preview = models.ImageField(upload_to="materials/", blank=True, null=True)
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, blank=True, null=True, related_name="material")
+    course = models.ForeignKey(
+        Course, on_delete=models.CASCADE, blank=True, null=True, related_name="material"
+    )
     video = models.FileField(upload_to="videos/", blank=True, null=True)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="materials",
+        verbose_name="Владелец",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         verbose_name = "Material"
