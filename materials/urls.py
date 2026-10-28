@@ -1,25 +1,20 @@
 from django.urls import path
+from rest_framework.routers import DefaultRouter
 
 from materials.apps import MaterialsConfig
-from materials.views import (
-    CourseViewSet,
-    MaterialCreateAPIView,
-    MaterialRetrieveAPIView,
-    MaterialUpdateAPIView,
-    MaterialDestroyAPIView,
-    MaterialListAPIView,
-)
-from rest_framework.routers import DefaultRouter
+from materials.views import (CourseViewSet, MaterialCreateAPIView,
+                             MaterialDestroyAPIView, MaterialListAPIView,
+                             MaterialRetrieveAPIView, MaterialUpdateAPIView)
 
 app_name = MaterialsConfig.name
 
 router = DefaultRouter()
-router.register(r"courses", CourseViewSet, basename="courses")
+router.register("", CourseViewSet, basename="courses")
 
 urlpatterns = [
-    path("create/", MaterialCreateAPIView.as_view(), name="create"),
-    path("", MaterialListAPIView.as_view(), name="list"),
-    path("<int:pk>/", MaterialRetrieveAPIView.as_view(), name="retrieve"),
-    path("update/<int:pk>/", MaterialUpdateAPIView.as_view(), name="update"),
-    path("delete/<int:pk>/", MaterialDestroyAPIView.as_view(), name="delete"),
+    path("materials/create/", MaterialCreateAPIView.as_view(), name="create"),
+    path("materials/", MaterialListAPIView.as_view(), name="list"),
+    path("materials/<int:pk>/", MaterialRetrieveAPIView.as_view(), name="retrieve"),
+    path("materials/update/<int:pk>/", MaterialUpdateAPIView.as_view(), name="update"),
+    path("materials/delete/<int:pk>/", MaterialDestroyAPIView.as_view(), name="delete"),
 ] + router.urls

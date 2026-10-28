@@ -61,8 +61,20 @@ class Payments(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="payments")
     date = models.DateTimeField(auto_now_add=True)
     total = models.DecimalField(max_digits=10, decimal_places=2)
-    lesson = models.ForeignKey("materials.Material", on_delete=models.CASCADE, blank=True, null=True, related_name="payment_material")
-    course = models.ForeignKey("materials.Course", on_delete=models.CASCADE, blank=True, null=True, related_name="payment_course")
+    lesson = models.ForeignKey(
+        "materials.Material",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        related_name="payment_material",
+    )
+    course = models.ForeignKey(
+        "materials.Course",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        related_name="payment_course",
+    )
     method = models.CharField(max_length=50, choices=PAYMENT_METHODS)
 
     class Meta:
