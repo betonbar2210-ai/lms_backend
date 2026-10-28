@@ -79,11 +79,10 @@ class UserRegisterSerializer(UniqueEmailMixin, serializers.ModelSerializer):
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    username_field = 'email'
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-
-        # Добавление пользовательских полей в токен
         token["email"] = user.email
 
         return token

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from materials.models import Course, Material
+from materials.validaors import external_resources
 
 
 class MaterialSerializer(serializers.ModelSerializer):
@@ -8,6 +9,10 @@ class MaterialSerializer(serializers.ModelSerializer):
         model = Material
         fields = "__all__"
         read_only_fields = ("owner",)
+        extra_kwargs = {
+            "video": {"validators": [external_resources]},
+        }
+
 
 
 class CourseSerializer(serializers.ModelSerializer):
