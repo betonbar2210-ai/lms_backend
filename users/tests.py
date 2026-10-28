@@ -1,10 +1,11 @@
 from django.contrib.auth.models import Group
 from django.core.management import call_command
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 from rest_framework.test import APITestCase
 
 from materials.models import Course
-from users.models import Payments, User
+from users.models import Payments, Subscriptions, User
 
 
 class UserPermissionTests(APITestCase):
@@ -194,4 +195,112 @@ class ModeratorGroupFixtureTests(TestCase):
         self.assertEqual(
             codenames,
             {"view_course", "change_course", "view_material", "change_material"},
+        )
+
+
+class SubscriptionTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            email="owner@example.com", password="pass12345"
+        )
+        self.other = User.objects.create_user(
+            email="other@example.com", password="pass12345"
+        )
+        self.course = Course.objects.create(name="Курс", owner=self.owner)
+
+    def toggle(self, user, payload):
+        self.client.force_authenticate(user)
+        return self.client.post("/users/subscriptions/", payload)
+
+    def test_toggle_adds_and_removes_subscription(self):
+        response = self.toggle(self.other, {"course_id": self.course.id})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"message": "подписка добавлена"})
+        self.assertTrue(
+            Subscriptions.objects.filter(user=self.other, course=self.course).exists()
+        )
+
+        response = self.toggle(self.other, {"course_id": self.course.id})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"message": "подписка удалена"})
+        self.assertFalse(
+            Subscriptions.objects.filter(user=self.other, course=self.course).exists()
+        )
+
+    def test_toggle_uses_current_user_and_ignores_foreign_user(self):
+        response = self.client.post(
+            "/users/subscriptions/",
+            {"course_id": self.course.id, "user": self.owner.id},
+        )
+        self.assertEqual(response.status_code, 401)
+
+        response = self.toggle(
+            self.other, {"course_id": self.course.id, "user": self.owner.id}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            Subscriptions.objects.filter(user=self.owner, course=self.course).exists()
+        )
+        self.assertTrue(
+            Subscriptions.objects.filter(user=self.other, course=self.course).exists()
+        )
+
+    def test_anonymous_cannot_toggle(self):
+        response = self.client.post(
+            "/users/subscriptions/", {"course_id": self.course.id}
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(Subscriptions.objects.exists())
+
+    def test_missing_course_id_returns_400(self):
+        response = self.toggle(self.other, {})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("course_id", response.json())
+
+    def test_invalid_course_id_returns_400(self):
+        response = self.toggle(self.other, {"course_id": 999999})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("course_id", response.json())
+        self.assertFalse(Subscriptions.objects.exists())
+
+    def test_is_subscribed_in_course_list_and_detail(self):
+        Subscriptions.objects.create(user=self.other, course=self.course)
+        self.client.force_authenticate(self.other)
+
+        listing = self.client.get("/courses/").json()["results"]
+        self.assertEqual(len(listing), 1)
+        self.assertTrue(listing[0]["is_subscribed"])
+
+        detail = self.client.get(f"/courses/{self.course.id}/").json()
+        self.assertTrue(detail["is_subscribed"])
+
+    def test_is_subscribed_is_false_without_subscription(self):
+        self.client.force_authenticate(self.other)
+
+        listing = self.client.get("/courses/").json()["results"]
+        self.assertFalse(listing[0]["is_subscribed"])
+
+        detail = self.client.get(f"/courses/{self.course.id}/").json()
+        self.assertFalse(detail["is_subscribed"])
+
+    def test_subscription_of_another_user_does_not_leak(self):
+        Subscriptions.objects.create(user=self.owner, course=self.course)
+        self.client.force_authenticate(self.other)
+
+        listing = self.client.get("/courses/").json()["results"]
+        self.assertFalse(listing[0]["is_subscribed"])
+
+        detail = self.client.get(f"/courses/{self.course.id}/").json()
+        self.assertFalse(detail["is_subscribed"])
+
+    def test_duplicate_subscription_is_blocked_by_constraint(self):
+        Subscriptions.objects.create(user=self.other, course=self.course)
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Subscriptions.objects.create(user=self.other, course=self.course)
+
+        self.assertEqual(
+            Subscriptions.objects.filter(user=self.other, course=self.course).count(),
+            1,
         )

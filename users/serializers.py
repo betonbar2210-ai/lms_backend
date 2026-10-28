@@ -3,6 +3,7 @@ from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from materials.models import Course
 from users.models import Payments, User
 
 
@@ -78,8 +79,15 @@ class UserRegisterSerializer(UniqueEmailMixin, serializers.ModelSerializer):
             ) from error
 
 
+class SubscriptionToggleSerializer(serializers.Serializer):
+    course_id = serializers.PrimaryKeyRelatedField(
+        queryset=Course.objects.all(), source="course"
+    )
+
+
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    username_field = 'email'
+    username_field = "email"
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)

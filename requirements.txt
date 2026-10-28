@@ -2,6 +2,7 @@ asgiref==3.12.1
 black==26.10.0
 click==8.5.0
 colorama==0.4.6
+coverage==7.17.0
 Django==6.1.1
 django-filter==26.2
 django-phonenumber-field==8.5.0
@@ -9,6 +10,7 @@ djangorestframework==3.18.1
 djangorestframework_simplejwt==5.5.1
 dotenv==0.9.9
 iniconfig==2.3.0
+isort==9.0.2
 mypy_extensions==1.1.0
 packaging==26.3
 pathspec==1.1.1

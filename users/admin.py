@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from users.models import Payments, User
+from users.models import Payments, User, Subscriptions
 
 
 @admin.register(User)
@@ -30,6 +30,13 @@ class UsersAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {"classes": ("wide",), "fields": ("email", "password1", "password2")}),
     )
+
+
+@admin.register(Subscriptions)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "course", "date")
+    list_filter = ("course",)
+    search_fields = ("user__email", "course__name")
 
 
 admin.site.register(Payments)
