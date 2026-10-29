@@ -8,6 +8,7 @@ from users.views import (
     PaymentViewSet,
     UserRegisterAPIView,
     UsersViewSet,
+    SubscriptionsToggleAPIView,
 )
 
 app_name = UsersConfig.name
@@ -21,6 +22,11 @@ payments_router.register("", PaymentViewSet, basename="payments")
 
 
 urlpatterns = [
+    path(
+        "subscriptions/",
+        SubscriptionsToggleAPIView.as_view(),
+        name="subscriptions_toggle",
+    ),
     path("register/", UserRegisterAPIView.as_view(), name="register"),
     path("token/", MyTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),

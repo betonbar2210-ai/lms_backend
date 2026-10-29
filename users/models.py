@@ -99,3 +99,29 @@ class Payments(models.Model):
         else:
             paid_for = "Не указано"
         return f"{self.user.email} - {paid_for} ({self.total} руб.)"
+
+
+class Subscriptions(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="subscriptions"
+    )
+    course = models.ForeignKey(
+        "materials.Course",
+        on_delete=models.CASCADE,
+        related_name="subscriptions",
+    )
+    date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Подписка"
+        verbose_name_plural = "Подписки"
+        ordering = ["-date"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "course"],
+                name="unique_subscription_user_course",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} - {self.course.name}"

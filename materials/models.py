@@ -29,9 +29,9 @@ class Material(models.Model):
     description = models.TextField(blank=True, null=True)
     preview = models.ImageField(upload_to="materials/", blank=True, null=True)
     course = models.ForeignKey(
-        Course, on_delete=models.CASCADE, blank=True, null=True, related_name="material"
+        Course, on_delete=models.CASCADE, related_name="material"
     )
-    video = models.FileField(upload_to="videos/", blank=True, null=True)
+    video = models.URLField(blank=True, null=True)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

@@ -25,20 +25,20 @@ class CourseAndMaterialPermissionTests(APITestCase):
 
     def test_anonymous_cannot_create_or_delete(self):
         self.assertEqual(
-            self.client.post("/materials/", {"name": "курс"}).status_code, 401
+            self.client.post("/courses/", {"name": "курс"}).status_code, 401
         )
         self.assertEqual(
             self.client.post(
-                "/materials/materials/create/", {"name": "урок"}
+                "/courses/materials/create/", {"name": "урок"}
             ).status_code,
             401,
         )
         self.assertEqual(
-            self.client.delete(f"/materials/{self.course.id}/").status_code, 401
+            self.client.delete(f"/courses/{self.course.id}/").status_code, 401
         )
         self.assertEqual(
             self.client.delete(
-                f"/materials/materials/delete/{self.material.id}/"
+                f"/courses/materials/delete/{self.material.id}/"
             ).status_code,
             401,
         )
@@ -46,82 +46,89 @@ class CourseAndMaterialPermissionTests(APITestCase):
     def test_owner_can_read_update_and_delete_own_objects(self):
         self.client.force_authenticate(self.owner)
 
-        self.assertEqual(self.client.get("/materials/").status_code, 200)
-        self.assertEqual(len(self.client.get("/materials/").json()), 1)
+        self.assertEqual(self.client.get("/courses/").status_code, 200)
+        self.assertEqual(len(self.client.get("/courses/").json()["results"]), 1)
         self.assertEqual(
-            self.client.get(f"/materials/{self.course.id}/").status_code, 200
+            self.client.get(f"/courses/{self.course.id}/").status_code, 200
         )
-        self.assertEqual(self.client.get("/materials/materials/").status_code, 200)
+        self.assertEqual(self.client.get("/courses/materials/").status_code, 200)
         self.assertEqual(
-            self.client.get(f"/materials/materials/{self.material.id}/").status_code,
+            self.client.get(f"/courses/materials/{self.material.id}/").status_code,
             200,
         )
 
         response = self.client.patch(
-            f"/materials/{self.course.id}/", {"name": "Новое имя"}
+            f"/courses/{self.course.id}/", {"name": "Новое имя"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["owner"], self.owner.id)
 
         response = self.client.patch(
-            f"/materials/materials/update/{self.material.id}/", {"name": "Новый урок"}
+            f"/courses/materials/update/{self.material.id}/", {"name": "Новый урок"}
         )
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(
-            self.client.delete(f"/materials/{self.course.id}/").status_code, 204
+            self.client.delete(f"/courses/{self.course.id}/").status_code, 204
         )
 
     def test_create_sets_current_user_as_owner(self):
         self.client.force_authenticate(self.other)
 
-        response = self.client.post("/materials/", {"name": "Мой курс"})
+        response = self.client.post("/courses/", {"name": "Мой курс"})
         self.assertEqual(response.status_code, 201)
         self.assertEqual(Course.objects.get(pk=response.json()["id"]).owner, self.other)
 
         response = self.client.post(
-            "/materials/materials/create/", {"name": "Мой урок"}
+            "/courses/materials/create/",
+            {"name": "Мой урок", "course": self.course.id},
         )
         self.assertEqual(response.status_code, 201)
         self.assertEqual(
             Material.objects.get(pk=response.json()["id"]).owner, self.other
         )
 
-    def test_user_cannot_read_foreign_objects(self):
+    def test_user_can_read_foreign_courses_but_not_foreign_materials(self):
         self.client.force_authenticate(self.other)
 
+        # Курсы видны всем авторизованным пользователям (нужно для подписок).
         self.assertEqual(
-            self.client.get(f"/materials/{self.course.id}/").status_code, 404
+            self.client.get(f"/courses/{self.course.id}/").status_code, 200
         )
         self.assertEqual(
-            self.client.get(f"/materials/materials/{self.material.id}/").status_code,
+            [course["id"] for course in self.client.get("/courses/").json()["results"]],
+            [self.course.id],
+        )
+
+        # Материалы по-прежнему доступны только владельцу или модератору.
+        self.assertEqual(
+            self.client.get(f"/courses/materials/{self.material.id}/").status_code,
             404,
         )
-        self.assertEqual(self.client.get("/materials/").json(), [])
-        self.assertEqual(self.client.get("/materials/materials/").json(), [])
+        self.assertEqual(self.client.get("/courses/materials/").json()["results"], [])
 
     def test_user_cannot_update_or_delete_foreign_objects(self):
         self.client.force_authenticate(self.other)
 
         self.assertEqual(
             self.client.patch(
-                f"/materials/{self.course.id}/", {"name": "Взлом"}
+                f"/courses/{self.course.id}/", {"name": "Взлом"}
             ).status_code,
             404,
         )
         self.assertEqual(
             self.client.patch(
-                f"/materials/materials/update/{self.material.id}/",
+                f"/courses/materials/update/{self.material.id}/",
                 {"name": "Взлом"},
             ).status_code,
             404,
         )
         self.assertEqual(
-            self.client.delete(f"/materials/{self.course.id}/").status_code, 404
+            self.client.delete(f"/courses/{self.course.id}/").status_code, 404
         )
         self.assertEqual(
             self.client.delete(
-                f"/materials/materials/delete/{self.material.id}/"
+                f"/courses/materials/delete/{self.material.id}/"
             ).status_code,
             404,
         )
@@ -129,44 +136,44 @@ class CourseAndMaterialPermissionTests(APITestCase):
     def test_moderator_can_read_and_edit_any_but_not_create_or_delete(self):
         self.client.force_authenticate(self.moderator)
 
-        self.assertEqual(len(self.client.get("/materials/").json()), 1)
+        self.assertEqual(len(self.client.get("/courses/").json()["results"]), 1)
         self.assertEqual(
-            self.client.get(f"/materials/{self.course.id}/").status_code, 200
+            self.client.get(f"/courses/{self.course.id}/").status_code, 200
         )
         self.assertEqual(
-            self.client.get(f"/materials/materials/{self.material.id}/").status_code,
+            self.client.get(f"/courses/materials/{self.material.id}/").status_code,
             200,
         )
 
         self.assertEqual(
             self.client.patch(
-                f"/materials/{self.course.id}/", {"name": "Правка модератора"}
+                f"/courses/{self.course.id}/", {"name": "Правка модератора"}
             ).status_code,
             200,
         )
         self.assertEqual(
             self.client.patch(
-                f"/materials/materials/update/{self.material.id}/",
+                f"/courses/materials/update/{self.material.id}/",
                 {"name": "Правка модератора"},
             ).status_code,
             200,
         )
 
         self.assertEqual(
-            self.client.post("/materials/", {"name": "Нельзя"}).status_code, 403
+            self.client.post("/courses/", {"name": "Нельзя"}).status_code, 403
         )
         self.assertEqual(
             self.client.post(
-                "/materials/materials/create/", {"name": "Нельзя"}
+                "/courses/materials/create/", {"name": "Нельзя"}
             ).status_code,
             403,
         )
         self.assertEqual(
-            self.client.delete(f"/materials/{self.course.id}/").status_code, 403
+            self.client.delete(f"/courses/{self.course.id}/").status_code, 403
         )
         self.assertEqual(
             self.client.delete(
-                f"/materials/materials/delete/{self.material.id}/"
+                f"/courses/materials/delete/{self.material.id}/"
             ).status_code,
             403,
         )
