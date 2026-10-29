@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from materials.models import Course, Material
-from materials.validaors import external_resources
+from materials.validators import external_resources
 
 
 class MaterialSerializer(serializers.ModelSerializer):
