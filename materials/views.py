@@ -88,10 +88,6 @@ class MaterialListAPIView(OwnerQuerysetMixin, generics.ListAPIView):
     queryset = Material.objects.select_related("owner").order_by("id")
     permission_classes = [IsAuthenticated]
     pagination_class = MyPagination
-    serializer_class = MaterialSerializer
-    queryset = Material.objects.select_related("owner").order_by("id")
-    permission_classes = [IsAuthenticated]
-    pagination_class = MyPagination
 
 
 class MaterialRetrieveAPIView(OwnerQuerysetMixin, generics.RetrieveAPIView):
@@ -113,5 +109,6 @@ class MaterialUpdateAPIView(OwnerQuerysetMixin, generics.UpdateAPIView):
 class MaterialDestroyAPIView(OwnerQuerysetMixin, generics.DestroyAPIView):
     """Удаление Материала"""
 
+    serializer_class = MaterialSerializer
     queryset = Material.objects.select_related("owner").all()
     permission_classes = [IsAuthenticated, IsNotModerator, IsOwnerOrModerator]

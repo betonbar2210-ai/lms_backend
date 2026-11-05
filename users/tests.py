@@ -1,10 +1,15 @@
+from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import stripe
 from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from rest_framework.test import APITestCase
 
-from materials.models import Course
+from materials.models import Course, Material
 from users.models import Payments, Subscriptions, User
 
 
@@ -304,3 +309,331 @@ class SubscriptionTests(APITestCase):
             Subscriptions.objects.filter(user=self.other, course=self.course).count(),
             1,
         )
+
+
+class StripePaymentTests(APITestCase):
+    """Тесты интеграции со Stripe с подменой внешнего API."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="stripe@example.com", password="pass12345"
+        )
+        self.course = Course.objects.create(
+            name="Курс", owner=self.user, price=Decimal("1000.00")
+        )
+        self.lesson = Material.objects.create(
+            name="Урок",
+            course=self.course,
+            owner=self.user,
+            price=Decimal("500.00"),
+        )
+        self.client.force_authenticate(self.user)
+
+    def _stripe_objects(self, payment_status="paid"):
+        product = SimpleNamespace(id="prod_test_123")
+        price = SimpleNamespace(id="price_test_123")
+        session = SimpleNamespace(
+            id="cs_test_123",
+            url="https://checkout.stripe.com/c/pay/cs_test_123",
+            payment_status=payment_status,
+            metadata={"user_id": str(self.user.id)},
+        )
+        return product, price, session
+
+    def test_create_payment_saves_all_stripe_data(self):
+        product, price, session = self._stripe_objects()
+
+        with (
+            patch(
+                "users.views.stripe.Product.create", return_value=product
+            ) as product_create,
+            patch(
+                "users.views.stripe.Price.create", return_value=price
+            ) as price_create,
+            patch(
+                "users.views.stripe.checkout.Session.create", return_value=session
+            ) as session_create,
+        ):
+            response = self.client.post(
+                "/users/payments/create/", {"course_id": self.course.id}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["url"], session.url)
+        self.assertEqual(response.json()["session_id"], session.id)
+
+        product_create.assert_called_once()
+        price_create.assert_called_once()
+        price_kwargs = price_create.call_args.kwargs
+        self.assertEqual(price_kwargs["unit_amount"], 100000)
+        self.assertEqual(price_kwargs["product"], product.id)
+        session_create.assert_called_once()
+
+        payment = Payments.objects.get(stripe_session_id=session.id)
+        self.assertEqual(payment.user, self.user)
+        self.assertEqual(payment.course, self.course)
+        self.assertIsNone(payment.lesson)
+        self.assertEqual(payment.status, "pending")
+        self.assertEqual(payment.stripe_product_id, product.id)
+        self.assertEqual(payment.stripe_price_id, price.id)
+        self.assertEqual(payment.stripe_payment_url, session.url)
+        self.assertEqual(payment.total, self.course.price)
+
+    def test_create_payment_for_lesson(self):
+        product, price, session = self._stripe_objects()
+
+        with (
+            patch("users.views.stripe.Product.create", return_value=product),
+            patch("users.views.stripe.Price.create", return_value=price),
+            patch("users.views.stripe.checkout.Session.create", return_value=session),
+        ):
+            response = self.client.post(
+                "/users/payments/create/", {"lesson_id": self.lesson.id}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payment = Payments.objects.get(stripe_session_id=session.id)
+        self.assertEqual(payment.lesson, self.lesson)
+        self.assertIsNone(payment.course)
+        self.assertEqual(payment.total, self.lesson.price)
+
+    def test_create_payment_without_ids_returns_400(self):
+        response = self.client.post("/users/payments/create/", {})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Payments.objects.exists())
+
+    def test_create_payment_with_both_ids_returns_400(self):
+        response = self.client.post(
+            "/users/payments/create/",
+            {"course_id": self.course.id, "lesson_id": self.lesson.id},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Payments.objects.exists())
+
+    def test_stripe_error_does_not_create_payment(self):
+        with patch(
+            "users.views.stripe.Product.create",
+            side_effect=stripe.error.StripeError("Stripe is unavailable"),
+        ):
+            response = self.client.post(
+                "/users/payments/create/", {"course_id": self.course.id}
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+        self.assertFalse(Payments.objects.exists())
+
+    def test_success_syncs_paid_status(self):
+        payment = Payments.objects.create(
+            user=self.user,
+            course=self.course,
+            total=self.course.price,
+            method="stripe",
+            status="pending",
+            stripe_session_id="cs_test_123",
+        )
+        _, _, session = self._stripe_objects(payment_status="paid")
+
+        with patch(
+            "users.views.stripe.checkout.Session.retrieve", return_value=session
+        ):
+            response = self.client.get(
+                "/users/payments/success/", {"session_id": payment.stripe_session_id}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "paid")
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, "paid")
+
+    def test_success_is_idempotent_for_already_paid_payment(self):
+        payment = Payments.objects.create(
+            user=self.user,
+            course=self.course,
+            total=self.course.price,
+            method="stripe",
+            status="paid",
+            stripe_session_id="cs_test_123",
+        )
+        _, _, session = self._stripe_objects(payment_status="paid")
+
+        with patch(
+            "users.views.stripe.checkout.Session.retrieve", return_value=session
+        ):
+            response = self.client.get(
+                "/users/payments/success/", {"session_id": payment.stripe_session_id}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "paid")
+
+    def test_success_handles_no_payment_required(self):
+        payment = Payments.objects.create(
+            user=self.user,
+            course=self.course,
+            total=self.course.price,
+            method="stripe",
+            status="pending",
+            stripe_session_id="cs_test_123",
+        )
+        _, _, session = self._stripe_objects(payment_status="no_payment_required")
+
+        with patch(
+            "users.views.stripe.checkout.Session.retrieve", return_value=session
+        ):
+            response = self.client.get(
+                "/users/payments/success/", {"session_id": payment.stripe_session_id}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "paid")
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, "paid")
+
+    def test_success_handles_unpaid_status(self):
+        payment = Payments.objects.create(
+            user=self.user,
+            course=self.course,
+            total=self.course.price,
+            method="stripe",
+            status="pending",
+            stripe_session_id="cs_test_123",
+        )
+        _, _, session = self._stripe_objects(payment_status="unpaid")
+
+        with patch(
+            "users.views.stripe.checkout.Session.retrieve", return_value=session
+        ):
+            response = self.client.get(
+                "/users/payments/success/", {"session_id": payment.stripe_session_id}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "pending")
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, "pending")
+
+    def test_success_handles_unknown_status(self):
+        payment = Payments.objects.create(
+            user=self.user,
+            course=self.course,
+            total=self.course.price,
+            method="stripe",
+            status="pending",
+            stripe_session_id="cs_test_123",
+        )
+        _, _, session = self._stripe_objects(payment_status="processing")
+
+        with patch(
+            "users.views.stripe.checkout.Session.retrieve", return_value=session
+        ):
+            response = self.client.get(
+                "/users/payments/success/", {"session_id": payment.stripe_session_id}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "pending")
+
+    def test_success_handles_real_stripe_metadata_object(self):
+        payment = Payments.objects.create(
+            user=self.user,
+            course=self.course,
+            total=self.course.price,
+            method="stripe",
+            status="pending",
+            stripe_session_id="cs_test_123",
+        )
+        session = SimpleNamespace(
+            id="cs_test_123",
+            url="https://checkout.stripe.com/c/pay/cs_test_123",
+            payment_status="paid",
+            metadata=stripe.StripeObject.construct_from(
+                {"user_id": str(self.user.id)}, None
+            ),
+        )
+
+        with patch(
+            "users.views.stripe.checkout.Session.retrieve", return_value=session
+        ):
+            response = self.client.get(
+                "/users/payments/success/", {"session_id": payment.stripe_session_id}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "paid")
+
+    def test_success_requires_session_id(self):
+        response = self.client.get("/users/payments/success/")
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_success_is_available_without_authentication(self):
+        self.client.force_authenticate(user=None)
+        payment = Payments.objects.create(
+            user=self.user,
+            course=self.course,
+            total=self.course.price,
+            method="stripe",
+            status="pending",
+            stripe_session_id="cs_test_123",
+        )
+        _, _, session = self._stripe_objects(payment_status="paid")
+
+        with patch(
+            "users.views.stripe.checkout.Session.retrieve", return_value=session
+        ):
+            response = self.client.get(
+                "/users/payments/success/", {"session_id": payment.stripe_session_id}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "paid")
+
+    def test_cancel_sets_canceled_status(self):
+        payment = Payments.objects.create(
+            user=self.user,
+            course=self.course,
+            total=self.course.price,
+            method="stripe",
+            status="pending",
+            stripe_session_id="cs_test_123",
+        )
+        self.client.force_authenticate(user=None)
+
+        response = self.client.get(
+            "/users/payments/cancel/", {"session_id": payment.stripe_session_id}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "canceled")
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, "canceled")
+
+    def test_cancel_does_not_downgrade_paid_payment(self):
+        payment = Payments.objects.create(
+            user=self.user,
+            course=self.course,
+            total=self.course.price,
+            method="stripe",
+            status="paid",
+            stripe_session_id="cs_test_123",
+        )
+
+        response = self.client.get(
+            "/users/payments/cancel/", {"session_id": payment.stripe_session_id}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "paid")
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, "paid")
+
+    def test_cancel_without_session_id_returns_200(self):
+        self.client.force_authenticate(user=None)
+
+        response = self.client.get("/users/payments/cancel/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "canceled")

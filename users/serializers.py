@@ -58,12 +58,17 @@ class PaymentSerializer(serializers.ModelSerializer):
             "paid_item",
             "total",
             "method",
+            "status",
             "date",
             "course",
             "lesson",
+            "stripe_session_id",
+            "stripe_product_id",
+            "stripe_price_id",
+            "stripe_payment_url",
         ]
 
-    def get_paid_item(self, obj):
+    def get_paid_item(self, obj) -> str:
         if obj.course:
             return obj.course.name
         if obj.lesson:

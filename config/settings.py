@@ -30,6 +30,9 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 
 STRIPE_TEST_KEY = os.getenv("STRIPE_TEST_KEY")
 
+# Валюта, в которой выставляются счета Stripe (например, rub, usd, eur)
+STRIPE_CURRENCY = os.getenv("STRIPE_CURRENCY", "rub")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 

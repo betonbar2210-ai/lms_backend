@@ -18,14 +18,14 @@ class CourseSerializer(serializers.ModelSerializer):
     count_material = serializers.SerializerMethodField()
     is_subscribed = serializers.SerializerMethodField()
 
-    def get_is_subscribed(self, obj):
+    def get_is_subscribed(self, obj) -> bool:
         request = self.context.get("request")
         user = getattr(request, "user", None)
         if not user or not user.is_authenticated:
             return False
         return obj.subscriptions.filter(user=user).exists()
 
-    def get_count_material(self, obj):
+    def get_count_material(self, obj) -> int:
         return obj.material.count()
 
     class Meta:

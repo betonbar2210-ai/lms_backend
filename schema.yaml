@@ -411,7 +411,11 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Users'
+          description: ''
     put:
       operationId: users_update
       parameters:
@@ -495,6 +499,26 @@ paths:
     get:
       operationId: users_payments_list
       parameters:
+      - in: query
+        name: course
+        schema:
+          type: integer
+      - in: query
+        name: lesson
+        schema:
+          type: integer
+      - in: query
+        name: method
+        schema:
+          type: string
+          enum:
+          - cash
+          - stripe
+          - transfer
+        description: |-
+          * `cash` - Наличными
+          * `transfer` - Перевод на счет
+          * `stripe` - Банковская карта (Stripe)
       - name: ordering
         required: false
         in: query
@@ -521,7 +545,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this Платеж.
         required: true
       tags:
       - users
@@ -534,6 +559,116 @@ paths:
               schema:
                 $ref: '#/components/schemas/Payment'
           description: ''
+  /users/payments/cancel/:
+    get:
+      operationId: users_payments_cancel_retrieve
+      description: Вызывается редиректом Stripe, если пользователь отказался от оплаты.
+        Переводит платеж в статус canceled, если он еще не оплачен.
+      summary: Отмена оплаты
+      parameters:
+      - in: query
+        name: session_id
+        schema:
+          type: string
+        description: ID сессии Stripe
+      tags:
+      - users
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: string
+                  payment_id:
+                    type: integer
+          description: Платеж отменен или уже был оплачен
+  /users/payments/create/:
+    post:
+      operationId: users_payments_create_create
+      description: Создает продукт, цену и сессию оплаты в Stripe. Сохраняет все идентификаторы
+        и ссылку на оплату в базе. Возвращает URL для перенаправления пользователя
+        на страницу оплаты.
+      summary: Создание платежа через Stripe
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    example: https://checkout.stripe.com/...
+                  session_id:
+                    type: string
+                    example: cs_test_...
+                  payment_id:
+                    type: integer
+                    example: 1
+          description: Успешное создание сессии
+        '400':
+          description: Ошибка валидации данных, нулевая цена или ошибка Stripe
+        '404':
+          description: Курс или урок не найден
+  /users/payments/success/:
+    get:
+      operationId: users_payments_success_retrieve
+      description: Вызывается редиректом Stripe после оплаты. Проверяет статус сессии
+        в Stripe и синхронизирует статус платежа в базе.
+      summary: Успешное завершение оплаты
+      parameters:
+      - in: query
+        name: session_id
+        schema:
+          type: string
+        description: ID сессии Stripe
+        required: true
+      tags:
+      - users
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                    - paid
+                    - pending
+                    - canceled
+                    - failed
+                  payment_id:
+                    type: integer
+          description: Статус платежа
+        '400':
+          description: Отсутствует session_id или ошибка Stripe
+        '404':
+          description: Платеж не найден
   /users/register/:
     post:
       operationId: users_register_create
@@ -564,13 +699,38 @@ paths:
   /users/subscriptions/:
     post:
       operationId: users_subscriptions_create
+      description: Создает подписку на курс, если ее нет, или удаляет существующую.
+        Повторный вызов переключает состояние подписки.
+      summary: Подписка на курс
       tags:
       - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionToggle'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriptionToggle'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionToggle'
+        required: true
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                    - подписка добавлена
+                    - подписка удалена
+          description: Результат переключения подписки
   /users/token/:
     post:
       operationId: users_token_create
@@ -647,10 +807,10 @@ components:
           nullable: true
           title: Владелец
         count_material:
-          type: string
+          type: integer
           readOnly: true
         is_subscribed:
-          type: string
+          type: boolean
           readOnly: true
       required:
       - count_material
@@ -675,10 +835,10 @@ components:
           nullable: true
           title: Владелец
         count_material:
-          type: string
+          type: integer
           readOnly: true
         is_subscribed:
-          type: string
+          type: boolean
           readOnly: true
         material:
           type: array
@@ -724,10 +884,12 @@ components:
       enum:
       - cash
       - transfer
+      - stripe
       type: string
       description: |-
         * `cash` - Наличными
         * `transfer` - Перевод на счет
+        * `stripe` - Банковская карта (Stripe)
     MyTokenObtainPair:
       type: object
       properties:
@@ -804,10 +966,10 @@ components:
           nullable: true
           title: Владелец
         count_material:
-          type: string
+          type: integer
           readOnly: true
         is_subscribed:
-          type: string
+          type: boolean
           readOnly: true
     PatchedMaterial:
       type: object
@@ -877,6 +1039,8 @@ components:
           pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
         method:
           $ref: '#/components/schemas/MethodEnum'
+        status:
+          $ref: '#/components/schemas/StatusEnum'
         date:
           type: string
           format: date-time
@@ -887,13 +1051,64 @@ components:
         lesson:
           type: integer
           nullable: true
+        stripe_session_id:
+          type: string
+          nullable: true
+          description: ID сессии Stripe для сверки
+          maxLength: 255
+        stripe_product_id:
+          type: string
+          nullable: true
+          description: ID продукта Stripe
+          maxLength: 255
+        stripe_price_id:
+          type: string
+          nullable: true
+          description: ID цены Stripe
+          maxLength: 255
+        stripe_payment_url:
+          nullable: true
+          description: Ссылка на страницу оплаты Stripe
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
       required:
       - date
       - id
-      - method
       - paid_item
       - total
       - user_email
+    PaymentCreateRequest:
+      type: object
+      properties:
+        course_id:
+          type: integer
+          description: ID курса для оплаты
+        lesson_id:
+          type: integer
+          description: ID урока для оплаты
+    StatusEnum:
+      enum:
+      - pending
+      - paid
+      - failed
+      - canceled
+      type: string
+      description: |-
+        * `pending` - Ожидает оплаты
+        * `paid` - Оплачено
+        * `failed` - Ошибка оплаты
+        * `canceled` - Отменено
+    SubscriptionToggle:
+      type: object
+      properties:
+        course_id:
+          type: integer
+      required:
+      - course_id
     TokenRefresh:
       type: object
       properties:
