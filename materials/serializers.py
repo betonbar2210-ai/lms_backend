@@ -7,7 +7,7 @@ from materials.validators import external_resources
 class MaterialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Material
-        fields = "__all__"
+        fields = ("id", "name", "description", "video", "course", "preview")
         read_only_fields = ("owner",)
         extra_kwargs = {
             "video": {"validators": [external_resources]},

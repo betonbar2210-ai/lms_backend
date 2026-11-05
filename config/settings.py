@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "materials",
     "django_filters",
     "rest_framework_simplejwt",
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -157,6 +158,8 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # Настройки документации API
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 # Настройки срока действия токенов
@@ -165,4 +168,11 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Мой API', # Заголовок для документации
+    'DESCRIPTION': 'Ничего нового изучаем', # Описание (опционально)
+    'VERSION': '1.0.0', # Версия вашего API
+    'SERVE_INCLUDE_SCHEMA': False, # Не показывать сырую схему OpenAPI на главной странице (опционально)
 }

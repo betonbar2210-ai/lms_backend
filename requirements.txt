@@ -1,5 +1,8 @@
-asgiref==3.12.1
+﻿asgiref==3.12.1
+attrs==26.1.0
 black==26.10.0
+certifi==2026.10.23
+charset-normalizer==3.5.2
 click==8.5.0
 colorama==0.4.6
 coverage==7.17.0
@@ -9,8 +12,13 @@ django-phonenumber-field==8.5.0
 djangorestframework==3.18.1
 djangorestframework_simplejwt==5.5.1
 dotenv==0.9.9
+drf-spectacular==0.30.0
+idna==3.20
+inflection==0.5.1
 iniconfig==2.3.0
 isort==9.0.2
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
 mypy_extensions==1.1.0
 packaging==26.3
 pathspec==1.1.1
@@ -24,5 +32,11 @@ PyJWT==2.15.1
 pytest==9.1.1
 python-dotenv==1.2.3
 pytokens==0.4.1
+PyYAML==6.0.3
+referencing==0.37.0
+requests==2.34.2
+rpds-py==2026.9.1
 sqlparse==0.6.0
 tzdata==2026.4
+uritemplate==4.2.0
+urllib3==2.8.0
