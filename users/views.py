@@ -98,7 +98,7 @@ class CreateStripePaymentView(APIView):
             price = stripe.Price.create(
                 product=product.id,
                 unit_amount=amount_in_cents,
-                currency="rub",  # Или 'usd'
+                currency="rub",
             )
 
             # 3. Создание Сессии оплаты
