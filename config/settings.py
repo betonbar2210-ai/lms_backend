@@ -28,6 +28,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
 
+STRIPE_TEST_KEY = os.getenv("STRIPE_TEST_KEY")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 
@@ -164,15 +166,15 @@ REST_FRAMEWORK = {
 
 # Настройки срока действия токенов
 SIMPLE_JWT = {
-    'USER_ID_FIELD': 'id',
-    'USER_ID_CLAIM': 'user_id',
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Мой API', # Заголовок для документации
-    'DESCRIPTION': 'Ничего нового изучаем', # Описание (опционально)
-    'VERSION': '1.0.0', # Версия вашего API
-    'SERVE_INCLUDE_SCHEMA': False, # Не показывать сырую схему OpenAPI на главной странице (опционально)
+    "TITLE": "Мой API",  # Заголовок для документации
+    "DESCRIPTION": "Ничего нового изучаем",  # Описание (опционально)
+    "VERSION": "1.0.0",  # Версия вашего API
+    "SERVE_INCLUDE_SCHEMA": False,  # Не показывать сырую схему OpenAPI на главной странице (опционально)
 }

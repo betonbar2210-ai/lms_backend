@@ -37,6 +37,8 @@ referencing==0.37.0
 requests==2.34.2
 rpds-py==2026.9.1
 sqlparse==0.6.0
+stripe==16.1.0
+typing_extensions==4.16.0
 tzdata==2026.4
 uritemplate==4.2.0
 urllib3==2.8.0
