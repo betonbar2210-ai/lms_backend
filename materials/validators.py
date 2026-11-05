@@ -1,5 +1,6 @@
-from rest_framework import serializers
 from urllib.parse import urlparse
+
+from rest_framework import serializers
 
 
 def external_resources(url):

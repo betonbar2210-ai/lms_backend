@@ -30,6 +30,8 @@ class OwnerQuerysetMixin:
 
 
 class CourseViewSet(OwnerQuerysetMixin, viewsets.ModelViewSet):
+    """Просмотр, Создание, Удаление, Редактирование Курсов"""
+
     queryset = Course.objects.select_related("owner").order_by("id")
     serializer_class = CourseSerializer
     pagination_class = MyPagination
@@ -70,6 +72,8 @@ class CourseViewSet(OwnerQuerysetMixin, viewsets.ModelViewSet):
 
 
 class MaterialCreateAPIView(generics.CreateAPIView):
+    """Создание Материала"""
+
     serializer_class = MaterialSerializer
     permission_classes = [IsAuthenticated, IsNotModerator]
 
@@ -78,6 +82,8 @@ class MaterialCreateAPIView(generics.CreateAPIView):
 
 
 class MaterialListAPIView(OwnerQuerysetMixin, generics.ListAPIView):
+    """Просмотр всех Материалов"""
+
     serializer_class = MaterialSerializer
     queryset = Material.objects.select_related("owner").order_by("id")
     permission_classes = [IsAuthenticated]
@@ -85,17 +91,24 @@ class MaterialListAPIView(OwnerQuerysetMixin, generics.ListAPIView):
 
 
 class MaterialRetrieveAPIView(OwnerQuerysetMixin, generics.RetrieveAPIView):
+    """Просмотр материала"""
+
     serializer_class = MaterialSerializer
     queryset = Material.objects.select_related("owner").all()
     permission_classes = [IsAuthenticated]
 
 
 class MaterialUpdateAPIView(OwnerQuerysetMixin, generics.UpdateAPIView):
+    """Редактирование Материала"""
+
     serializer_class = MaterialSerializer
     queryset = Material.objects.select_related("owner").all()
     permission_classes = [IsAuthenticated, IsOwnerOrModerator]
 
 
 class MaterialDestroyAPIView(OwnerQuerysetMixin, generics.DestroyAPIView):
+    """Удаление Материала"""
+
+    serializer_class = MaterialSerializer
     queryset = Material.objects.select_related("owner").all()
     permission_classes = [IsAuthenticated, IsNotModerator, IsOwnerOrModerator]

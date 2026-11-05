@@ -7,7 +7,7 @@ from materials.validators import external_resources
 class MaterialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Material
-        fields = "__all__"
+        fields = ("id", "name", "description", "video", "course", "preview")
         read_only_fields = ("owner",)
         extra_kwargs = {
             "video": {"validators": [external_resources]},
@@ -18,14 +18,14 @@ class CourseSerializer(serializers.ModelSerializer):
     count_material = serializers.SerializerMethodField()
     is_subscribed = serializers.SerializerMethodField()
 
-    def get_is_subscribed(self, obj):
+    def get_is_subscribed(self, obj) -> bool:
         request = self.context.get("request")
         user = getattr(request, "user", None)
         if not user or not user.is_authenticated:
             return False
         return obj.subscriptions.filter(user=user).exists()
 
-    def get_count_material(self, obj):
+    def get_count_material(self, obj) -> int:
         return obj.material.count()
 
     class Meta:

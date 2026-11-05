@@ -28,6 +28,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
 
+STRIPE_TEST_KEY = os.getenv("STRIPE_TEST_KEY")
+
+# Валюта, в которой выставляются счета Stripe (например, rub, usd, eur)
+STRIPE_CURRENCY = os.getenv("STRIPE_CURRENCY", "rub")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 
@@ -48,6 +53,7 @@ INSTALLED_APPS = [
     "materials",
     "django_filters",
     "rest_framework_simplejwt",
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -157,12 +163,21 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # Настройки документации API
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 # Настройки срока действия токенов
 SIMPLE_JWT = {
-    'USER_ID_FIELD': 'id',
-    'USER_ID_CLAIM': 'user_id',
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Мой API",  # Заголовок для документации
+    "DESCRIPTION": "Ничего нового изучаем",  # Описание (опционально)
+    "VERSION": "1.0.0",  # Версия вашего API
+    "SERVE_INCLUDE_SCHEMA": False,  # Не показывать сырую схему OpenAPI на главной странице (опционально)
 }

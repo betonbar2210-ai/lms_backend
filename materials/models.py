@@ -7,6 +7,13 @@ class Course(models.Model):
     name = models.CharField(max_length=100, default="Без названия")
     description = models.TextField(blank=True, null=True)
     preview = models.ImageField(upload_to="courses/", blank=True, null=True)
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Цена курса",
+        help_text="Цена в рублях",
+    )
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -32,6 +39,13 @@ class Material(models.Model):
         Course, on_delete=models.CASCADE, related_name="material"
     )
     video = models.URLField(blank=True, null=True)
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Цена материала",
+        help_text="Цена в рублях",
+    )
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
