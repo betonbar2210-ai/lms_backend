@@ -34,7 +34,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Скопируйте `.env.example` в `.env` и заполните переменные:
+Скопируйте `.env.example` в `.env` и заполните переменные (полный список — в `.env.example`):
 
 ```dotenv
 DATABASE_NAME=...
@@ -47,10 +47,25 @@ SECRET_KEY=...
 DEBUG=True
 ALLOWED_HOSTS=127.0.0.1,localhost
 
-# Ключ из https://dashboard.stripe.com/test/apikeys (начинается с sk_test_)
+# Stripe (ключ начинается с sk_test_)
 STRIPE_TEST_KEY=sk_test_...
-# Валюта цен Stripe
 STRIPE_CURRENCY=rub
+
+# Celery / Redis
+CELERY_BROKER_URL=redis://127.0.0.1:6379/0
+CELERY_RESULT_BACKEND=redis://127.0.0.1:6379/0
+
+# Email / SMTP
+# Для разработки по умолчанию используется консольный backend (письма выводятся в лог).
+# Для реальной отправки укажите SMTP-настройки:
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_USE_SSL=False
+EMAIL_HOST_USER=...
+EMAIL_HOST_PASSWORD=...
+DEFAULT_FROM_EMAIL=noreply@lms.local
 ```
 
 Примените миграции и запустите сервер:
