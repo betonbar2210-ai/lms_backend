@@ -1,4 +1,4 @@
-﻿# Core dependencies
+# Core dependencies
 Django==6.1.1
 djangorestframework==3.18.1
 djangorestframework-simplejwt==5.5.1
@@ -11,6 +11,12 @@ psycopg2-binary==2.9.13
 pillow==12.3.0
 stripe==16.1.0
 PyYAML==6.0.3
+
+# Celery & broker
+celery==5.6.3
+redis==8.1.0
+# Пул для запуска воркера на Windows (celery -A config worker -l info -P eventlet)
+eventlet==0.41.3
 
 # Development tools
 black==26.10.0

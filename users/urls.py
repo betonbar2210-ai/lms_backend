@@ -3,16 +3,10 @@ from rest_framework import routers
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from users.apps import UsersConfig
-from users.views import (
-    CreateStripePaymentView,
-    MyTokenObtainPairView,
-    PaymentCancelView,
-    PaymentSuccessView,
-    PaymentViewSet,
-    SubscriptionsToggleAPIView,
-    UserRegisterAPIView,
-    UsersViewSet,
-)
+from users.views import (CreateStripePaymentView, MyTokenObtainPairView,
+                         PaymentCancelView, PaymentSuccessView, PaymentViewSet,
+                         SubscriptionsToggleAPIView, UserRegisterAPIView,
+                         UsersViewSet)
 
 app_name = UsersConfig.name
 

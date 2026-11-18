@@ -1,13 +1,14 @@
+from datetime import timedelta
+
+from django.utils import timezone
 from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
 
 from materials.models import Course, Material
 from materials.paginators import MyPagination
-from materials.serializers import (
-    CourseDetailSerializer,
-    CourseSerializer,
-    MaterialSerializer,
-)
+from materials.serializers import (CourseDetailSerializer, CourseSerializer,
+                                   MaterialSerializer)
+from materials.tasks import send_course_update_notification
 from users.permissions import IsNotModerator, IsOwnerOrModerator, is_moderator
 
 
@@ -70,6 +71,10 @@ class CourseViewSet(OwnerQuerysetMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
+    def perform_update(self, serializer):
+        course = serializer.save()
+        send_course_update_notification.delay(course.pk)
+
 
 class MaterialCreateAPIView(generics.CreateAPIView):
     """Создание Материала"""
@@ -104,6 +109,15 @@ class MaterialUpdateAPIView(OwnerQuerysetMixin, generics.UpdateAPIView):
     serializer_class = MaterialSerializer
     queryset = Material.objects.select_related("owner").all()
     permission_classes = [IsAuthenticated, IsOwnerOrModerator]
+
+    def perform_update(self, serializer):
+        material = serializer.save()
+        course = material.course
+        now = timezone.now()
+        # Уведомляем подписчиков, только если курс не обновлялся более 4 часов
+        if now - course.updated_at > timedelta(hours=4):
+            Course.objects.filter(pk=course.pk).update(updated_at=now)
+            send_course_update_notification.delay(course.pk)
 
 
 class MaterialDestroyAPIView(OwnerQuerysetMixin, generics.DestroyAPIView):

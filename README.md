@@ -125,6 +125,34 @@ Content-Type: application/json
 уже получил оплату. Для production-сценария нужен webhook на
 `checkout.session.completed` с проверкой подписи (`stripe.Webhook.construct_event`).
 
+## Celery
+
+В проекте настроен Celery с брокером Redis (`config/celery.py`, настройки в
+`config/settings.py`). Для работы нужен запущенный Redis.
+
+Запуск воркера:
+
+```bash
+# Linux / macOS
+celery -A config worker -l info
+
+# Windows (prefork недоступен, используется eventlet)
+celery -A config worker -l info -P eventlet
+```
+
+Проверка, что Celery видит задачи:
+
+```bash
+celery -A config inspect registered
+```
+
+Для быстрой проверки конфигурации без Redis можно вызвать тестовую задачу в
+eager-режиме:
+
+```bash
+python manage.py shell -c "from config.celery import debug_task; from django.conf import settings; settings.CELERY_TASK_ALWAYS_EAGER=True; debug_task.delay()"
+```
+
 ## Тесты
 
 ```bash

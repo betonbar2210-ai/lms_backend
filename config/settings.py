@@ -11,9 +11,11 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -37,6 +39,14 @@ STRIPE_CURRENCY = os.getenv("STRIPE_CURRENCY", "rub")
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = os.getenv("EMAIL_PORT")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 
 
 # Application definition
@@ -125,7 +135,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Moscow"
 
 USE_I18N = True
 
@@ -145,6 +155,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@lms.local")
 
 AUTH_USER_MODEL = "users.User"
 
@@ -181,3 +192,29 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",  # Версия вашего API
     "SERVE_INCLUDE_SCHEMA": False,  # Не показывать сырую схему OpenAPI на главной странице (опционально)
 }
+
+
+# Настройки Celery
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# Периодические задачи celery-beat
+CELERY_BEAT_SCHEDULE = {
+    "deactivate-inactive-users-daily": {
+        "task": "users.tasks.deactivate_inactive_users",
+        "schedule": crontab(hour=0, minute=0),
+    },
+}
+
+# В тестах задачи выполняются синхронно, без Redis/воркера
+if "test" in sys.argv:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+    CELERY_TASK_STORE_EAGER_RESULT = False

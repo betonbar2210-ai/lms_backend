@@ -3,7 +3,8 @@ import logging
 import stripe
 from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from drf_spectacular.utils import (OpenApiParameter, OpenApiResponse,
+                                   extend_schema)
 from rest_framework import generics, status, viewsets
 from rest_framework.filters import OrderingFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -15,15 +16,11 @@ from config import settings
 from materials.models import Course, Material
 from users.models import Payments, Subscriptions, User
 from users.permissions import IsSelfOrReadOnly, is_moderator
-from users.serializers import (
-    MyTokenObtainPairSerializer,
-    PaymentCreateRequestSerializer,
-    PaymentSerializer,
-    SubscriptionToggleSerializer,
-    UserPrivateSerializer,
-    UserRegisterSerializer,
-    UsersSerializer,
-)
+from users.serializers import (MyTokenObtainPairSerializer,
+                               PaymentCreateRequestSerializer,
+                               PaymentSerializer, SubscriptionToggleSerializer,
+                               UserPrivateSerializer, UserRegisterSerializer,
+                               UsersSerializer)
 
 logger = logging.getLogger(__name__)
 
